@@ -7,6 +7,7 @@ module VaultExample::Vault {
     const ENOT_VAULT_EXAMPLE_ADDRESS: u64 = 0;
     const ENOT_PUBLISHED: u64 = 1;
     const EALREADY_PUBLISHED: u64 = 2;
+    const EVAULT_IS_PAUSED: u64 = 3;
 
     struct ManagedCoin<phantom CoinType> has key {
         coin: u64
@@ -50,6 +51,7 @@ module VaultExample::Vault {
     }
 
     public fun deposit<CoinType: drop>(requester: &signer, amount: u64, witness: CoinType) acquires VaultStatus, ManagedCoin {
+        assert!(borrow_global_mut<VaultStatus>(@VaultExample).is_paused == false, EVAULT_IS_PAUSED);
         assert!(exists<ManagedCoin<CoinType>>(@VaultExample), ENOT_PUBLISHED);
         BasicCoin::transfer<CoinType>(requester, @VaultExample, amount, witness);
 
@@ -66,6 +68,7 @@ module VaultExample::Vault {
     }
 
     public fun withdraw<CoinType: drop>(vault: &signer, requester: &signer, amount: u64, witness: CoinType) acquires VaultStatus, ManagedCoin {
+        assert!(borrow_global_mut<VaultStatus>(@VaultExample).is_paused == false, EVAULT_IS_PAUSED);
         assert!(exists<ManagedCoin<CoinType>>(@VaultExample), ENOT_PUBLISHED);
         BasicCoin::transfer<CoinType>(vault, signer::address_of(requester), amount, witness);
 
@@ -163,6 +166,41 @@ module VaultExample::Vault {
 
         let coin = borrow_global<ManagedCoin<MyTestCoin>>(addr1).coin;
         assert!(coin == 0, 0);
+    }
+
+    #[test(account1 = @VaultExample, account2 = @Alice)]
+    #[expected_failure(abort_code = 3)]
+    public entry fun user_cannot_deposit_when_vault_is_paused(account1: signer, account2: signer) acquires VaultStatus, ManagedCoin {
+        let addr2 = signer::address_of(&account2);
+        init_module(&account1);
+
+        create_coin<MyTestCoin>(&account1);
+        BasicCoin::publish_balance<MyTestCoin>(&account2);
+        BasicCoin::mint(addr2, 10, MyTestCoin {});
+
+        pause(&account1);
+
+        let deposit_amount = 10;
+        deposit(&account2, deposit_amount, MyTestCoin {});
+    }
+
+    #[test(account1 = @VaultExample, account2 = @Alice)]
+    #[expected_failure(abort_code = 3)]
+    public entry fun user_cannot_withdraw_when_vault_is_paused(account1: signer, account2: signer) acquires VaultStatus, ManagedCoin {
+        let addr2 = signer::address_of(&account2);
+        init_module(&account1);
+
+        create_coin<MyTestCoin>(&account1);
+        BasicCoin::publish_balance<MyTestCoin>(&account2);
+        BasicCoin::mint(addr2, 10, MyTestCoin {});
+
+        let deposit_amount = 10;
+        deposit(&account2, deposit_amount, MyTestCoin {});
+
+        pause(&account1);
+
+        let withdraw_amount = deposit_amount;
+        withdraw(&account1, &account2, withdraw_amount, MyTestCoin {});
     }
 
     #[test(account = @VaultExample)]
