@@ -6,6 +6,5 @@ version = "0.0.0"
 AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", subdir = "aptos-move/framework/aptos-framework/", rev = "devnet" }
 
 [addresses]
-BasicCoin = "0x7ec8f962139943bc41c17a72e782b7729b1625cf65ed7812152a5677364a4f88"
 VaultExample = "0x11c32982d04fbcc79b694647edff88c5b5d5b1a99c9d2854039175facbeefb40"
 Alice = "0x1e41f9c730911920c1ea5056788e947391f0695c4fee8494d764d723adec0f0a"
